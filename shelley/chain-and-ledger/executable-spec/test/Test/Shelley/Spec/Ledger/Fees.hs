@@ -499,16 +499,16 @@ sizeTests :: TestTree
 sizeTests =
   testGroup
     "Fee Tests"
-    [ testCase "simple utxo" $ sizeTest p txSimpleUTxOBytes16 txSimpleUTxO 139,
-      testCase "multiple utxo" $ sizeTest p txMutiUTxOBytes16 txMutiUTxO 462,
-      testCase "register stake key" $ sizeTest p txRegisterStakeBytes16 txRegisterStake 150,
-      testCase "delegate stake key" $ sizeTest p txDelegateStakeBytes16 txDelegateStake 178,
-      testCase "deregister stake key" $ sizeTest p txDeregisterStakeBytes16 txDeregisterStake 150,
-      testCase "register stake pool" $ sizeTest p txRegisterPoolBytes16 txRegisterPool 200,
-      testCase "retire stake pool" $ sizeTest p txRetirePoolBytes16 txRetirePool 149,
-      testCase "metadata" $ sizeTest p txWithMDBytes16 txWithMD 154,
-      testCase "multisig" $ sizeTest p txWithMultiSigBytes16 (txWithMultiSig p) 189,
-      testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal 172
+    [ testCase "simple utxo" $ sizeTest p txSimpleUTxOBytes16 txSimpleUTxO 57,
+      testCase "multiple utxo" $ sizeTest p txMutiUTxOBytes16 txMutiUTxO 138,
+      testCase "register stake key" $ sizeTest p txRegisterStakeBytes16 txRegisterStake 68,
+      testCase "delegate stake key" $ sizeTest p txDelegateStakeBytes16 txDelegateStake 96,
+      testCase "deregister stake key" $ sizeTest p txDeregisterStakeBytes16 txDeregisterStake 68,
+      testCase "register stake pool" $ sizeTest p txRegisterPoolBytes16 txRegisterPool 118,
+      testCase "retire stake pool" $ sizeTest p txRetirePoolBytes16 txRetirePool 67,
+      testCase "metadata" $ sizeTest p txWithMDBytes16 txWithMD 72,
+      testCase "multisig" $ sizeTest p txWithMultiSigBytes16 (txWithMultiSig p) 107,
+      testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal 90
     ]
   where
     p :: Proxy ShortHash

@@ -515,7 +515,7 @@ testEmptyInputSet =
 testFeeTooSmall :: Assertion
 testFeeTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 206) (Coin 1)))]
+    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 74) (Coin 1)))]
     $ aliceGivesBobLovelace
       AliceToBob
         { input = (TxIn genesisId 0),

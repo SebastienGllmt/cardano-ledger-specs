@@ -41,8 +41,7 @@ module Shelley.Spec.Ledger.TxData
         _txfee,
         _ttl,
         _txUpdate,
-        _mdHash,
-        extraSize
+        _mdHash
       ),
     TxId (..),
     TxIn (..),
@@ -78,7 +77,6 @@ import Cardano.Binary
     serializeEncoding,
     serializeEncoding',
     szCases,
-    withSlice,
   )
 import Cardano.Prelude
   ( AllowThunksIn (..),
@@ -95,13 +93,11 @@ import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (explicitParseField)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
 import Data.IP (IPv4, IPv6)
-import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
@@ -465,8 +461,7 @@ data TxBody crypto = TxBody'
     _ttl' :: !SlotNo,
     _txUpdate' :: !(StrictMaybe (Update crypto)),
     _mdHash' :: !(StrictMaybe (MetaDataHash crypto)),
-    bodyBytes :: LByteString,
-    extraSize :: Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
+    bodyBytes :: LByteString
   }
   deriving (Show, Eq, Generic)
   deriving
@@ -516,10 +511,9 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
           inputBytes = serializeEncoding' $ encodeFoldable _inputs
           outputBytes = serializeEncoding' $ encodeFoldable _outputs
           feeBytes = serializeEncoding' $ toCBOR _txfee
-          es = fromIntegral $ BS.length inputBytes + BS.length outputBytes + BS.length feeBytes
           n = fromIntegral $ length l
           bytes = serializeEncoding $ encodeMapLen n <> fold l
-       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes es
+       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes
 
 {-# COMPLETE TxBody #-}
 
@@ -719,26 +713,14 @@ instance
     mapParts <-
       decodeMapContents $
         decodeWord >>= \case
-          0 -> f 0 (decodeSet fromCBOR) $ \bytes x t ->
-            t
-              { _inputs' = x,
-                extraSize = extraSize t + BSL.length bytes
-              }
-          1 -> f 1 (decodeStrictSeq fromCBOR) $ \bytes x t ->
-            t
-              { _outputs' = x,
-                extraSize = extraSize t + BSL.length bytes
-              }
-          2 -> f 2 fromCBOR $ \bytes x t ->
-            t
-              { _txfee' = x,
-                extraSize = extraSize t + BSL.length bytes
-              }
-          3 -> f 3 fromCBOR $ \_ x t -> t {_ttl' = x}
-          4 -> f 4 (decodeStrictSeq fromCBOR) $ \_ x t -> t {_certs' = x}
-          5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
-          6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
-          7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
+          0 -> f 0 (decodeSet fromCBOR) $ \x t -> t {_inputs' = x}
+          1 -> f 1 (decodeStrictSeq fromCBOR) $ \x t -> t {_outputs' = x}
+          2 -> f 2 fromCBOR $ \x t -> t {_txfee' = x}
+          3 -> f 3 fromCBOR $ \x t -> t {_ttl' = x}
+          4 -> f 4 (decodeStrictSeq fromCBOR) $ \x t -> t {_certs' = x}
+          5 -> f 5 fromCBOR $ \x t -> t {_wdrls' = x}
+          6 -> f 6 fromCBOR $ \x t -> t {_txUpdate' = SJust x}
+          7 -> f 7 fromCBOR $ \x t -> t {_mdHash' = SJust x}
           k -> invalidKey k
     let requiredFields :: Map Int String
         requiredFields =
@@ -754,19 +736,17 @@ instance
       (null missingFields)
       (fail $ "missing required transaction component(s): " <> show missingFields)
     pure $
-      Annotator $ \fullbytes bytes ->
-        (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
+      Annotator $ \_fullbytes bytes ->
+        (foldr ($) basebody (snd <$> mapParts)) {bodyBytes = bytes}
     where
       f ::
         Int ->
         Decoder s a ->
-        (LByteString -> a -> TxBody crypto -> TxBody crypto) ->
-        Decoder s (Int, Annotator (TxBody crypto -> TxBody crypto))
+        (a -> TxBody crypto -> TxBody crypto) ->
+        Decoder s (Int, TxBody crypto -> TxBody crypto)
       f key decoder updater = do
-        (x, annBytes) <- withSlice decoder
-        let result = Annotator $ \fullbytes txbody ->
-              updater (runAnnotator annBytes fullbytes) x txbody
-        pure (key, result)
+        x <- decoder
+        pure (key, updater x)
       basebody =
         TxBody'
           { _inputs' = Set.empty,
@@ -777,8 +757,7 @@ instance
             _wdrls' = Wdrl Map.empty,
             _txUpdate' = SNothing,
             _mdHash' = SNothing,
-            bodyBytes = mempty,
-            extraSize = 0
+            bodyBytes = mempty
           }
 
 instance ToCBOR PoolMetaData where

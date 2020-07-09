@@ -705,25 +705,11 @@ genesisState genDelegs0 utxo0 =
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- | Implementation of abstract transaction size
-txsize :: forall crypto. (Crypto crypto) => Tx crypto -> Integer
-txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
-  where
-    uint = 5
-    smallArray = 1
-    hashLen = 32
-    hashObj = 2 + hashLen
-    addrHashLen = 28
-    addrHeader = 1
-    address = 2 + addrHeader + 2 * addrHashLen
-    txbody = _body tx
-    numInputs = toInteger . length . _inputs $ txbody
-    inputSize = smallArray + uint + hashObj
-    numOutputs = toInteger . length . _outputs $ txbody
-    outputSize = smallArray + uint + address
-    rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
+txsize :: Tx crypto -> Integer
+txsize = fromIntegral . BSL.length . txFullBytes
 
 -- | Minimum fee calculation
-minfee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
+minfee :: PParams -> Tx crypto -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
 -- | Compute the lovelace which are created by the transaction
