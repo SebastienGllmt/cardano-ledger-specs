@@ -220,19 +220,31 @@ balance (UTxO utxo) = foldr addCoins 0 utxo
   where
     addCoins (TxOut _ a) b = a + b
 
--- | Determine the total deposit amount needed
+-- | Determine the total deposit amount needed.
+-- We rely on the dvalue to get the deposit value for each certificate,
+-- but for a list of certificates we must only count a (RegPool hk)
+-- deposit once for a particular hk.
 totalDeposits ::
   PParams ->
   StakePools crypto ->
   [DCert crypto] ->
   Coin
-totalDeposits pc (StakePools stpools) cs = foldl' f (Coin 0) cs'
+totalDeposits pc (StakePools stpools) cs = 
+  fst $ foldl' f (Coin 0, Set.empty) cs
   where
-    f coin cert = coin + dvalue cert pc
-    notRegisteredPool (DCertPool (RegPool pool)) =
-      Map.notMember (_poolPubKey pool) stpools
-    notRegisteredPool _ = True
-    cs' = filter notRegisteredPool cs
+    -- We accumulate the total deposit and track the pool keys we
+    -- encounter in RegPool certs 
+    f (coin, stPoolsLocal) c@(DCertPool (RegPool pool)) = 
+      let hk = _poolPubKey pool
+      in 
+        if alreadyRegistered hk stPoolsLocal 
+        then (coin, stPoolsLocal)
+        else (coin + dvalue c pc, Set.insert hk stPoolsLocal)
+    f (coin, stPoolsLocal) cert = 
+      (coin + dvalue cert pc, stPoolsLocal)
+    -- Whether a pool is already registered in global or local state
+    alreadyRegistered hk stPoolsLocal =
+      Map.member hk stpools || Set.member hk stPoolsLocal
 
 txup :: Crypto crypto => Tx crypto -> Maybe (Update crypto)
 txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
