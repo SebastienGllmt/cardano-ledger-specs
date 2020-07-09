@@ -21,7 +21,9 @@ module Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     lastAppliedHash,
     BHBody (..),
+    poolIDfromBHBody,
     BHeader (BHeader),
+    poolIDfromBHeader,
     Block (Block),
     LaxBlock (..),
     TxSeq (TxSeq, txSeqTxns'),
@@ -119,10 +121,12 @@ import Shelley.Spec.Ledger.Keys
     SignedKES,
     VKey,
     VerKeyVRF,
+    coerceKeyRole,
     decodeSignedKES,
     decodeVerKeyVRF,
     encodeSignedKES,
     encodeVerKeyVRF,
+    hashKey,
   )
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -469,6 +473,16 @@ instance
           bheaderOCert,
           bprotver
         }
+
+-- | Retrieve the pool id (the hash of the pool operator's cold key)
+-- from the body of the block header.
+poolIDfromBHBody :: Crypto crypto => BHBody crypto -> KeyHash 'StakePool crypto
+poolIDfromBHBody = coerceKeyRole . hashKey . bheaderVk
+
+-- | Retrieve the pool id (the hash of the pool operator's cold key)
+-- from the block header.
+poolIDfromBHeader :: Crypto crypto => BHeader crypto -> KeyHash 'StakePool crypto
+poolIDfromBHeader = poolIDfromBHBody . bHeaderBody'
 
 data Block crypto
   = Block' !(BHeader crypto) !(TxSeq crypto) LByteString
