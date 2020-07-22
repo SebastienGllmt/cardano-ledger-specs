@@ -208,7 +208,7 @@ transaction_metadatum =
 transaction_metadadum_label = uint
 
 transaction_metadata =
-  { * transaction_metadadum_label => transaction_metadatum }
+  { * transaction_metadatum_label => transaction_metadatum }
 
 vkeywitness = [ $vkey, $signature ]
 
